@@ -1,4 +1,3 @@
-PIC16F690
-=========
+Using PIC16F690: http://www.microchip.com/wwwproducts/Devices.aspx?dDocName=en023112
 
-University Project
+Data Sheet: http://ww1.microchip.com/downloads/en/DeviceDoc/41262E.pdf

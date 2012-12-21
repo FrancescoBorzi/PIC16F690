@@ -1,4 +1,6 @@
-/* PIC16F690 */
+/* PIC16F690 
+	This is just an example about how to use lights.
+*/
 
 #include <xc.h>
 #include <pic16f690.h>

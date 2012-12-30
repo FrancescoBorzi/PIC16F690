@@ -30,34 +30,35 @@ void putch(unsigned char byte) {
     TXREG = byte;
     while (!TXSTAbits.TRMT); /* set when register is empty */
 }
-int adc, us, ms, s, test, T_DELAY = 0;
+int adc, us, ms, s, test, T_DELAY, adc1, adc2 = 0;
 
 void interrupt isr(void) {
 
     if (PIR1bits.ADIF == 1) {
-
-        adc = (ADRESH << 8) + ADRESL;
-       // PORTCbits.RC0 = !PORTCbits.RC0;
         PIR1bits.ADIF = 0;
-        ADCON0bits.GO = 1;
-        // printf("test1\n\r");
-
+        ADCON0bits.GO_DONE = 1;
+        adc2 = adc1;
+        adc1 = adc;
+        adc = (ADRESH << 8) + ADRESL;
+        
+       
+        PORTCbits.RC1 = !PORTCbits.RC1;
     }
 
-        if (INTCONbits.T0IF == 1) {
-            TMR0 = T_DELAY;
-            //PORTCbits.RC1 = !PORTCbits.RC1;
-            if(test) {
-                 ms = ms + 65;
-                 if(ms>1000) {
-                     ms = 0;
-                     s++;
-          //           PORTCbits.RC0 = !PORTCbits.RC0;
-                 }
+    if (INTCONbits.T0IF == 1) {
+        TMR0 = T_DELAY;
+        INTCONbits.T0IF = 0; 
+        if (test) {
+            ms++;
+            if (ms == 1000) {
+                ms = 30;
+                s++;
+                PORTCbits.RC0 = !PORTCbits.RC0;
             }
-            INTCONbits.T0IF = 0;
-       }
-
+        }
+        
+    }
+PORTCbits.RC2 = !PORTCbits.RC2;
 }
 
 int main(void) {
@@ -67,7 +68,7 @@ int main(void) {
     //registri per settare le porte da analogico a digitale, inizialmente le setto tutte a digitale
     ANSEL = 0; //e successivamente mi setto le porte analogiche che mi servono
     ANSELH = 0;
-    T_DELAY = 0;
+    T_DELAY = 256 - 4;
     /* configure digital I/O */
     TRISCbits.TRISC0 = 0;
     TRISCbits.TRISC1 = 0;
@@ -79,15 +80,12 @@ int main(void) {
     TXSTAbits.TX9 = 0; // 8 bit data
     TXSTAbits.TXEN = 1; // enable transmitter
     TXSTAbits.BRGH = 1; // high speed transmission
-
     // setup UART receiver
     RCSTAbits.SPEN = 1; // enable serial port
     RCSTAbits.RX9 = 0; // 8 bit data
     RCSTAbits.CREN = 1; // enable receiver
-
     // baud rate generator control
     BAUDCTLbits.BRG16 = 1; // 16 bit baud rate generator
-
     // baud rate generator value
     SPBRGH = 0;
     SPBRG = 207;
@@ -100,12 +98,11 @@ int main(void) {
 
     ADCON0bits.ADFM = 1; // right justified
     ADCON0bits.VCFG = 0; // Reference = VDD
-    // Select channel 0
-    ADCON0bits.CHS = 0b0010;
+    ADCON0bits.CHS = 0b0010; // Select channel 0
     // turn adc ok
 
     ADCON1bits.ADCS = 0b110; // ADC clock = FOSC/64
-    INTCONbits.PEIE = 1;
+    INTCONbits.PEIE = 1; //enable peripheral interrupt ?
     //abilito l'interrupt del converitore
     PIR1bits.ADIF = 0;
     PIE1bits.ADIE = 1;
@@ -113,7 +110,7 @@ int main(void) {
     ADCON0bits.ADON = 1;
     ADCON0bits.GO = 1;
 
-     OPTION_REGbits.T0CS = 0;
+    OPTION_REGbits.T0CS = 0;
     OPTION_REGbits.PS = 0b111;
     OPTION_REGbits.PSA = 0;
 
@@ -123,27 +120,28 @@ int main(void) {
     INTCONbits.GIE = 1;
 
 
+
     for (;;) {
-        adc = 0;
-        while(adc < 400);
+        adc = adc1 = adc2 = 0;
+        while ((adc + adc1 + adc2) / 3 < 200) ;
         ADCON0bits.CHS = 0b1010;
-        printf("start\n\r");
-       
         test = 1;
-        adc = 0;
-        while (adc < 400);
-        ADCON0bits.CHS = 0b0010;
+        //printf("start\n\r");
+        adc = adc1 = adc2 = 0;
+        while ((adc + adc1 + adc2) / 3 < 200)PORTCbits.RC3 = !PORTCbits.RC3;
         test = 0;
-        printf("%ds %dms\n\r",s,ms);
-       
+        ADCON0bits.CHS = 0b0010;
+
+        printf("%ds %dms\n\r", s, ms);
+
         ms = s = 0;
         printf("\n\r");
         printf("\n\r");
         printf("\n\r");
         printf("\n\r");
-        __delay_ms(1000);
+         __delay_ms(500);
 
-     
+
     }
 
     return 0;

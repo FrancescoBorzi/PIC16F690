@@ -2,6 +2,7 @@
 #include <pic16f690.h>
 #include <delays.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 // PIC16F690 Configuration Bit Settings
 
@@ -25,6 +26,7 @@ int distance; // massima distanza tollerata
 int distance2; // distanza fra i sensori
 int ms; // tempo misurato in millisecondi
 int mode; // unita' di misura della velocita'
+float * Data;
 
 // ridefinisco la printf
 void putch(unsigned char byte)
@@ -52,6 +54,16 @@ void interrupt isr(void)
 
 void settaggi()
 {
+    Data = (float *)malloc(sizeof(float)*8);
+    Data[0] = 0;
+    Data[1] = 2.50;
+    Data[3] = 1.40;
+    Data[4] = 0.96;
+    Data[5] = 0.60;
+    Data[6] = 0.52;
+    Data[7] = 0.48;
+    Data[8] = 0.40;
+
     int restart = 0;
     
     do

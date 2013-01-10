@@ -54,15 +54,15 @@ void interrupt isr(void)
 
 void settaggi()
 {
-    Data = (float *)malloc(sizeof(float)*8);
-    Data[0] = 0;
-    Data[1] = 2.50;
-    Data[3] = 1.40;
-    Data[4] = 0.96;
-    Data[5] = 0.60;
-    Data[6] = 0.52;
-    Data[7] = 0.48;
-    Data[8] = 0.40;
+//    Data = (float *)malloc(sizeof(float)*8);
+//    Data[0] = 0;
+//    Data[1] = 2.50;
+//    Data[3] = 1.40;
+//    Data[4] = 0.96;
+//    Data[5] = 0.60;
+//    Data[6] = 0.52;
+//    Data[7] = 0.48;
+//    Data[8] = 0.40;
 
     int restart = 0;
     

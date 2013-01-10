@@ -76,12 +76,17 @@ void update() {
 
 int main(void) {
     us = ms = s = test = 0;
-    //frequenza settata a 4Mhz
+    
+    // frequenza settata a 4Mhz
     OSCCONbits.IRCF = 0b111;
-    //registri per settare le porte da analogico a digitale, inizialmente le setto tutte a digitale
-    ANSEL = 0; //e successivamente mi setto le porte analogiche che mi servono
+    
+    // registri per settare le porte da analogico a digitale, inizialmente le setto tutte a digitale
+    // e successivamente mi setto le porte analogiche che mi servono
+    ANSEL = 0; 
     ANSELH = 0;
+    
     T_DELAY = 256 - 250;
+    
     /* configure digital I/O */
     TRISCbits.TRISC0 = 0;
     TRISCbits.TRISC1 = 0;
@@ -89,16 +94,21 @@ int main(void) {
     TRISCbits.TRISC3 = 0;
     TRISBbits.TRISB7 = 0; // TX PIN set to output
     TRISBbits.TRISB5 = 1; // RX PIN set to input
+    
+    
     // setup UART transmitter
     TXSTAbits.TX9 = 0; // 8 bit data
     TXSTAbits.TXEN = 1; // enable transmitter
     TXSTAbits.BRGH = 1; // high speed transmission
+    
     // setup UART receiver
     RCSTAbits.SPEN = 1; // enable serial port
     RCSTAbits.RX9 = 0; // 8 bit data
     RCSTAbits.CREN = 1; // enable receiver
+    
     // baud rate generator control
     BAUDCTLbits.BRG16 = 1; // 16 bit baud rate generator
+    
     // baud rate generator value
     SPBRGH = 0;
     SPBRG = 207;
@@ -124,8 +134,10 @@ int main(void) {
     OPTION_REGbits.T0CS = 0;
     OPTION_REGbits.PS = 0b000;
     OPTION_REGbits.PSA = 0;
+    
 //faccio partire il timer
     INTCONbits.T0IF = 0;
+    
    // INTCONbits.T0IE = 1; // enable interrupt on timer 0
 //abilito l'interrupt generale
     INTCONbits.GIE = 1;

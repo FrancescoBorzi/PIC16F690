@@ -30,58 +30,124 @@ void putch(unsigned char byte) {
     TXREG = byte;
     while (!TXSTAbits.TRMT); /* set when register is empty */
 }
-int adc, us, ms, s, test, T_DELAY, adc1, adc2 = 0;
+int adc, distance, ms, mode, T_DELAY, adc1, adc2, distance2 = 0;
 
 void interrupt isr(void) {
-   // if (INTCONbits.T0IF == 1) {
-    us = us + 250;
-            if (us == 1000) {
-                us = 0;
-                ms++;
-                if(ms == 1000) {
-                    s++;
-                    ms = 0;
-                    PORTCbits.RC0 = !PORTCbits.RC0;
-                }
-                
-            }
+    if (INTCONbits.T0IF == 1) {
+        ms++;
+        if (ms == 1000) {
+            ms = 0;
+            PORTCbits.RC0 = !PORTCbits.RC0;
+        }
         TMR0 = T_DELAY;
         INTCONbits.T0IF = 0;
-    //}
-        
-    
+    }
+}
 
-//    if (PIR1bits.ADIF == 1) {
-//
-//        adc2 = adc1;
-//        adc1 = adc;
-//        adc = (ADRESH << 8) + ADRESL;
-//        PIR1bits.ADIF = 0;
-//        ADCON0bits.GO = 1;
-//    } 
-   
-    
+void settaggi() {
+    int restart = 0;
+    do {
+        char c;
+        int x;
+        printf("-----------Autovelox v1.0--------------\n\r");
+        printf("               Setup                    \n\r");
+        printf("\n\r");
+        printf("\n\r");
+        printf("\n\r");
+        printf("SELEZIONARE LA DISTANZA DI RIVELAMENTO\n\r");
+        printf("\n\r");
+        printf("Press 1 to 20cm\n\r");
+        printf("Press 2 to 40cm\n\r");
+        printf("Press 3 to 60cm\n\r");
+        printf("Press 4 to 80cm\n\r");
+
+        while (PIR1bits.RCIF == 0);
+        c = RCREG;
+        switch (c) {
+            case '1': distance = 20;
+                break;
+            case '2': distance = 40;
+                break;
+            case '3': distance = 60;
+                break;
+            case '4': distance = 80;
+                break;
+        }
+        printf("selected %d\n\r", distance);
+        printf("\n\r");
+        printf("SELEZIONARE UNITA' DI MISURA\n\r");
+        printf("\n\r");
+        printf("Press 1 to Km/h\n\r");
+        printf("Press 2 to m/s\n\r");
+        while (PIR1bits.RCIF == 0);
+        c = RCREG;
+        switch (c) {
+            case '1': mode = 1;
+                break;
+            case '2': mode = 0;
+                break;
+        }
+        if(mode)
+            printf("selected Km/h\n\r");
+        else
+            printf("selected m/s\n\r");
+
+        printf("\n\r");
+        printf("SELEZIONARE LA DISTANZA FRA I SENSORI(press enter to default)\n\r");
+        printf("\n\r");
+        distance2 = 0;
+        while(x != 13) {
+            while (PIR1bits.RCIF == 0);
+            x = RCREG;
+            if (x == 13 ) {
+                break;
+            } else {
+                distance2 = x - 48;
+                printf("%d", distance2);
+            }
+        }
+        printf("\n\r");
+        printf("Do you are ready for start Autovelox?\n\r");
+        printf("press 1 to start or 0 to restart setup\n\r");
+        while (PIR1bits.RCIF == 0);
+        c = RCREG;
+        switch (c) {
+            case '0': restart = 1;
+                break;
+            case '1': restart = 0;
+                break;
+        }
+
+    } while (restart);
+
+
+    printf("\n\r");
+    printf("\n\r");
+    printf("Start\n\r");
+
 
 
 
 }
+
 void update() {
-        adc2 = adc1;
-        adc1 = adc;
-        ADCON0bits.GO = 1; // start conversion
-        while (ADCON0bits.GO == 1); // wait for end of conversion
-            adc = (ADRESH << 8) + ADRESL;
-   
+    adc2 = adc1;
+    adc1 = adc;
+    ADCON0bits.GO = 1; // start conversion
+    while (ADCON0bits.GO == 1); // wait for end of conversion
+    adc = (ADRESH << 8) + ADRESL;
+
 }
 
 int main(void) {
-    us = ms = s = test = 0;
+    ms = 0;
     //frequenza settata a 4Mhz
     OSCCONbits.IRCF = 0b111;
+    OSCTUNEbits.TUN = 0b11010;
     //registri per settare le porte da analogico a digitale, inizialmente le setto tutte a digitale
     ANSEL = 0; //e successivamente mi setto le porte analogiche che mi servono
     ANSELH = 0;
-    T_DELAY = 256 - 250;
+    T_DELAY = 6 + 1;
     /* configure digital I/O */
     TRISCbits.TRISC0 = 0;
     TRISCbits.TRISC1 = 0;
@@ -104,7 +170,7 @@ int main(void) {
     SPBRG = 207;
 
     PORTC = 0x00;
-
+    settaggi();
     /* configure ADC */
     ANSELbits.ANS2 = 1; //setto le porte
     ANSELHbits.ANS10 = 1;
@@ -113,44 +179,44 @@ int main(void) {
     ADCON0bits.VCFG = 0; // Reference = VDD
     ADCON0bits.CHS = 0b0010; // Select channel 
     ADCON0bits.ADON = 1; //enable adc module
-    ADCON1bits.ADCS = 0b000; // ADC clock =FOSC/2
-   // INTCONbits.PEIE = 1; //enable peripheral interrupt ?
+    ADCON1bits.ADCS = 0b010; // ADC clock =FOSC/32
+    // INTCONbits.PEIE = 1; //enable peripheral interrupt ?
     //abilito l'interrupt del converitore
-//    PIR1bits.ADIF = 0;
-//    PIE1bits.ADIE = 1;
+    //    PIR1bits.ADIF = 0;
+    //    PIE1bits.ADIE = 1;
 
-    
-//setto il timer
+
+    //setto il timer
     OPTION_REGbits.T0CS = 0;
-    OPTION_REGbits.PS = 0b000;
+    OPTION_REGbits.PS = 0b010;
     OPTION_REGbits.PSA = 0;
-//faccio partire il timer
+    //faccio partire il timer
     INTCONbits.T0IF = 0;
-   // INTCONbits.T0IE = 1; // enable interrupt on timer 0
-//abilito l'interrupt generale
+    // INTCONbits.T0IE = 1; // enable interrupt on timer 0
+    //abilito l'interrupt generale
     INTCONbits.GIE = 1;
 
-
+    //OSCTUNE
 
     for (;;) {
         do {
-            update();    
-        }while((adc + adc1 + adc2) / 3 < 200);
+            update();
+        } while (adc < 300 || adc1 < 300 || adc2 < 300);
         ADCON0bits.CHS = 0b1010;
         INTCONbits.T0IE = 1;
         //printf("start\n\r");
         adc = adc1 = adc2 = 0;
-        
+
         do {
             update();
-        }while ((adc + adc1 + adc2) / 3 < 200);
+        } while (adc < 300 || adc1 < 300 || adc2 < 300);
         INTCONbits.T0IE = 0;
         ADCON0bits.CHS = 0b0010;
         adc = adc1 = adc2 = 0;
 
-        printf("%ds %dms %dus\n\r", s, ms, us);
+        printf("%ds %dms\n\r", (int) (ms / 1000), ms);
 
-        ms = s = us = 0;
+        ms = 0;
         printf("\n\r");
         printf("\n\r");
         printf("\n\r");

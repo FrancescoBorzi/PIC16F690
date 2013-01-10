@@ -57,8 +57,8 @@ void settaggi()
     do
     {
     	// variabili di appoggio
-        char c;
-        int x;
+        char c, num[3];
+        int x, count;
         
         printf("-----------Autovelox v1.0--------------\n\r");
         printf("               Setup                    \n\r");
@@ -122,25 +122,34 @@ void settaggi()
         printf("\n\r");
         
         // TODO: distance2 deve contenere il numero composto da tutti i caratteri cifra ricevute in input
-        printf("SELEZIONARE LA DISTANZA FRA I SENSORI(press enter to default)\n\r");
+        printf("SELEZIONARE LA DISTANZA FRA I SENSORI COMPRESA TRA 0 E 999(enter = default)\n\r");
         printf("\n\r");
+
+        // inizializzo le variabili di appoggio
+        distance2 = count = 0;
+        num[0] = 0;
+        num[1] = 0;
+        num[2] = 0;
         
-        distance2 = 0;
-        
-        while(x != 13)
+        while(x != 13 && count < 3)
         {
             while (PIR1bits.RCIF == 0);
-            
+
             x = RCREG;
             
             if (x == 13 )
                 break;
             else
             {
-                distance2 = x - 48;
-                printf("%d", distance2);
+                num[count] = x;
+                count++;
             }
         }
+
+        distance2 = (num[0] - 48) * 100 + (num[0] - 48) * 10 + (num[0] - 48);
+
+        printf("(TEST): valore scelto %d", distance);
+
         printf("\n\r");
         
         

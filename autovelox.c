@@ -56,7 +56,7 @@ void settaggi()
     
     do
     {
-    		// variabili di appoggio
+    	// variabili di appoggio
         char c;
         int x;
         
@@ -72,7 +72,7 @@ void settaggi()
         printf("Press 3 to 60cm\n\r");
         printf("Press 4 to 80cm\n\r");
 
-		// aspetta un input da tastiera
+	// aspetta un input da tastiera
         while (PIR1bits.RCIF == 0);
         
         // memorizza il carattere che e' appena arrivato
@@ -169,7 +169,7 @@ void settaggi()
 
 void update()
 {
-	// cronologia delle misure
+    // cronologia delle misure
     adc2 = adc1;
     adc1 = adc;
     
@@ -180,9 +180,9 @@ void update()
     adc = (ADRESH << 8) + ADRESL;
 }
 
-int main(void)
+main()
 {
-	//frequenza settata a 4Mhz
+    //frequenza settata a 4Mhz
     OSCCONbits.IRCF = 0b111;
     OSCTUNEbits.TUN = 0b11010;
     
@@ -236,9 +236,6 @@ int main(void)
     OPTION_REGbits.PS = 0b010;
     OPTION_REGbits.PSA = 0;
     
-	// flag overflow
-    // INTCONbits.T0IF = 0;
-    
     // abilito l'interrupt generale
     INTCONbits.GIE = 1;
 
@@ -246,7 +243,7 @@ int main(void)
 
     for (;;)
     {
-    		// ricezione dal primo sensore
+    	// ricezione dal primo sensore
         do	update();
         while (adc < 300 || adc1 < 300 || adc2 < 300);
         
@@ -259,7 +256,7 @@ int main(void)
         // azzero la cronologia
         adc = adc1 = adc2 = 0;
 		
-		// ricezione dal secondo sensore
+	// ricezione dal secondo sensore
         do	update();
         while (adc < 300 || adc1 < 300 || adc2 < 300);
         
@@ -272,10 +269,10 @@ int main(void)
         // azzero la cronologia
         adc = adc1 = adc2 = 0;
 
-		// output del risultato
+        // output del risultato
         printf("%ds %dms\n\r", (int) (ms / 1000), ms);
 
-		// resetto il tempo
+	// resetto il tempo
         ms = 0;
         
         printf("\n\r");
@@ -285,5 +282,4 @@ int main(void)
         
         __delay_ms(500);
     }
-    return 0;
 }

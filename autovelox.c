@@ -146,7 +146,7 @@ void settaggi()
             }
         }
 
-        distance2 = (num[0] - 48) * 100 + (num[0] - 48) * 10 + (num[0] - 48);
+        distance2 = (num[0] - 48) * 100 + (num[1] - 48) * 10 + (num[2] - 48);
 
         printf("(TEST): valore scelto %d", distance2);
 

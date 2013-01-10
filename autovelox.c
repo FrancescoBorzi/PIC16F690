@@ -1,9 +1,3 @@
-/*
- * File:   Main.c
- * Author: Gabriele
- *
- * Created on 22 dicembre 2012, 18.26
- */
 #define _XTAL_FREQ   8000000
 
 #include <xc.h>

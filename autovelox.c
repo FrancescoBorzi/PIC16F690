@@ -1,5 +1,3 @@
-#define _XTAL_FREQ   8000000
-
 #include <xc.h>
 #include <pic16f690.h>
 #include <delays.h>
@@ -18,10 +16,17 @@
 #pragma config IESO = ON        // Internal External Switchover bit (Internal External Switchover mode is enabled)
 #pragma config FCMEN = ON       // Fail-Safe Clock Monitor Enabled bit (Fail-Safe Clock Monitor is enabled)
 
-int adc, distance, ms, mode, T_DELAY, adc1, adc2, distance2 = 0;
+
+#define _XTAL_FREQ   8000000
+#define T_DELAY 256 - 249
+
+int adc, adc1, adc2; // contengono il valore della misura della distanza
+int distance; // massima distanza tollerata
+int distance2; // distanza fra i sensori
+int ms; // tempo misurato in millisecondi
+int mode; // unita' di misura della velocita'
 
 // ridefinisco la printf
-
 void putch(unsigned char byte)
 {
     /* output one byte */
@@ -31,6 +36,7 @@ void putch(unsigned char byte)
 
 void interrupt isr(void)
 {
+    // scatta ogni millisecondo
     if (INTCONbits.T0IF == 1)
     {
         ms++;
@@ -50,6 +56,7 @@ void settaggi()
     
     do
     {
+    		// variabili di appoggio
         char c;
         int x;
         
@@ -65,10 +72,13 @@ void settaggi()
         printf("Press 3 to 60cm\n\r");
         printf("Press 4 to 80cm\n\r");
 
+		// aspetta un input da tastiera
         while (PIR1bits.RCIF == 0);
         
+        // memorizza il carattere che e' appena arrivato
         c = RCREG;
         
+        // settaggio distanza massima tollerata
         switch (c)
         {
             case '1': distance = 20;
@@ -83,15 +93,19 @@ void settaggi()
         
         printf("selected %d\n\r", distance);
         printf("\n\r");
+        
         printf("SELEZIONARE UNITA' DI MISURA\n\r");
         printf("\n\r");
         printf("Press 1 to Km/h\n\r");
         printf("Press 2 to m/s\n\r");
         
+        // aspetta un input da tastiera
         while (PIR1bits.RCIF == 0);
         
+        // memorizza il carattere che e' appena arrivato
         c = RCREG;
         
+        // settaggio unita' di misura
         switch (c)
         {
             case '1': mode = 1;
@@ -106,6 +120,8 @@ void settaggi()
             printf("selected m/s\n\r");
 
         printf("\n\r");
+        
+        // TODO: distance2 deve contenere il numero composto da tutti i caratteri cifra ricevute in input
         printf("SELEZIONARE LA DISTANZA FRA I SENSORI(press enter to default)\n\r");
         printf("\n\r");
         
@@ -126,6 +142,8 @@ void settaggi()
             }
         }
         printf("\n\r");
+        
+        
         printf("Do you are ready for start Autovelox?\n\r");
         printf("press 1 to start or 0 to restart setup\n\r");
         
@@ -151,6 +169,7 @@ void settaggi()
 
 void update()
 {
+	// cronologia delle misure
     adc2 = adc1;
     adc1 = adc;
     
@@ -163,28 +182,14 @@ void update()
 
 int main(void)
 {
-
-    us = ms = s = test = 0;
-    
-    // frequenza settata a 4Mhz
+	//frequenza settata a 4Mhz
     OSCCONbits.IRCF = 0b111;
+    OSCTUNEbits.TUN = 0b11010;
     
     // registri per settare le porte da analogico a digitale, inizialmente le setto tutte a digitale
     // e successivamente mi setto le porte analogiche che mi servono
     ANSEL = 0; 
     ANSELH = 0;
-    
-    T_DELAY = 256 - 250;
-    
-    ms = 0;
-    //frequenza settata a 4Mhz
-    OSCCONbits.IRCF = 0b111;
-    OSCTUNEbits.TUN = 0b11010;
-    
-    //registri per settare le porte da analogico a digitale, inizialmente le setto tutte a digitale
-    ANSEL = 0; //e successivamente mi setto le porte analogiche che mi servono
-    ANSELH = 0;
-    T_DELAY = 6 + 1;
 
     /* configure digital I/O */
     TRISCbits.TRISC0 = 0;
@@ -210,61 +215,67 @@ int main(void)
     // baud rate generator value
     SPBRGH = 0;
     SPBRG = 207;
-
+	
     PORTC = 0x00;
+    
+    // avvia la configurazione utente
     settaggi();
     
     /* configure ADC */
-    ANSELbits.ANS2 = 1; //setto le porte
+    ANSELbits.ANS2 = 1; // setto le porte
     ANSELHbits.ANS10 = 1;
 
     ADCON0bits.ADFM = 1; // right justified
     ADCON0bits.VCFG = 0; // Reference = VDD
     ADCON0bits.CHS = 0b0010; // Select channel 
-    ADCON0bits.ADON = 1; //enable adc module
+    ADCON0bits.ADON = 1; // enable adc module
     ADCON1bits.ADCS = 0b010; // ADC clock =FOSC/32
-    // INTCONbits.PEIE = 1; //enable peripheral interrupt ?
-    //abilito l'interrupt del converitore
-    //    PIR1bits.ADIF = 0;
-    //    PIE1bits.ADIE = 1;
 
-
-    //setto il timer
+    // setto il timer
     OPTION_REGbits.T0CS = 0;
     OPTION_REGbits.PS = 0b010;
     OPTION_REGbits.PSA = 0;
     
-//faccio partire il timer
-    INTCONbits.T0IF = 0;
+	// flag overflow
+    // INTCONbits.T0IF = 0;
     
-   // INTCONbits.T0IE = 1; // enable interrupt on timer 0
-//abilito l'interrupt generale
-    //faccio partire il timer
-    INTCONbits.T0IF = 0;
-    // INTCONbits.T0IE = 1; // enable interrupt on timer 0
-    //abilito l'interrupt generale
+    // abilito l'interrupt generale
     INTCONbits.GIE = 1;
 
-    //OSCTUNE
+	ms = 0;
+
     for (;;)
     {
+    		// ricezione dal primo sensore
         do	update();
         while (adc < 300 || adc1 < 300 || adc2 < 300);
         
+        // cambia il sensore di ricezione
         ADCON0bits.CHS = 0b1010;
+        
+        // avvio il timer
         INTCONbits.T0IE = 1;
-        //printf("start\n\r");
+        
+        // azzero la cronologia
         adc = adc1 = adc2 = 0;
-
+		
+		// ricezione dal secondo sensore
         do	update();
         while (adc < 300 || adc1 < 300 || adc2 < 300);
         
+        // disabilito il timer
         INTCONbits.T0IE = 0;
+        
+        // riabilita il primo canale (a scapito del secondo)
         ADCON0bits.CHS = 0b0010;
+        
+        // azzero la cronologia
         adc = adc1 = adc2 = 0;
 
+		// output del risultato
         printf("%ds %dms\n\r", (int) (ms / 1000), ms);
 
+		// resetto il tempo
         ms = 0;
         
         printf("\n\r");

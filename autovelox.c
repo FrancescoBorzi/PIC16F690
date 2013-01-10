@@ -138,13 +138,12 @@ void settaggi()
         printf("\n\r");
 
         // inizializzo le variabili di appoggio
-        distance2 = x = 0;
-        count = 2;
-        num[0] = 0;
-        num[1] = 0;
-        num[2] = 0;
+        distance2 = x = count = 0;
+        num[0] = 48;
+        num[1] = 48;
+        num[2] = 48;
         
-        while(x != 13 && count >= 0)
+        while(x != 13 && count < 3)
         {
             while (PIR1bits.RCIF == 0);
 
@@ -156,11 +155,24 @@ void settaggi()
             {
                 printf("%d", x-48);
                 num[count] = x;
-                count--;
+                count++;
             }
         }
-
-        distance2 = (num[0] - 48) * 100 + (num[1] - 48) * 10 + (num[2] - 48);
+        switch (count)
+        {
+                case 0:
+                    distance2 = 20;
+                    break;
+                case 1:
+                    distance2 = num[0] - 48;
+                    break;
+                case 2:
+                    distance2 = (num[0] - 48) * 10 + (num[1] - 48);
+                    break;
+                case 3:
+                    distance2 = (num[0] - 48) * 100 + (num[1] - 48) * 10 + (num[2] - 48);
+                    break;
+        }
 
         printf("(TEST): valore scelto %d\n", distance2);
 

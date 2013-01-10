@@ -177,7 +177,10 @@ void update()
     
     while (ADCON0bits.GO == 1); // wait for end of conversion
     
-    adc = (ADRESH << 8) + ADRESL;
+    adc = (ADRESH );
+    printf("%d\n\r",adc);
+    printf("%d\n\r",ADRESL);
+    __delay_ms(100);
 }
 
 main()

@@ -54,15 +54,15 @@ void interrupt isr(void)
 
 void settaggi()
 {
-    Data = (float *)malloc(sizeof(float)*8);
-    Data[0] = 0;
-    Data[1] = 2.50;
-    Data[3] = 1.40;
-    Data[4] = 0.96;
-    Data[5] = 0.60;
-    Data[6] = 0.52;
-    Data[7] = 0.48;
-    Data[8] = 0.40;
+//    Data = (float *)malloc(sizeof(float)*8);
+//    Data[0] = 0;
+//    Data[1] = 2.50;
+//    Data[3] = 1.40;
+//    Data[4] = 0.96;
+//    Data[5] = 0.60;
+//    Data[6] = 0.52;
+//    Data[7] = 0.48;
+//    Data[8] = 0.40;
 
     int restart = 0;
     
@@ -138,12 +138,13 @@ void settaggi()
         printf("\n\r");
 
         // inizializzo le variabili di appoggio
-        distance2 = count = 0;
+        distance2 = x = 0;
+        count = 2;
         num[0] = 0;
         num[1] = 0;
         num[2] = 0;
         
-        while(x != 13 && count < 3)
+        while(x != 13 && count >= 0)
         {
             while (PIR1bits.RCIF == 0);
 
@@ -153,14 +154,15 @@ void settaggi()
                 break;
             else
             {
+                printf("%d", x-48);
                 num[count] = x;
-                count++;
+                count--;
             }
         }
 
         distance2 = (num[0] - 48) * 100 + (num[1] - 48) * 10 + (num[2] - 48);
 
-        printf("(TEST): valore scelto %d", distance2);
+        printf("(TEST): valore scelto %d\n", distance2);
 
         printf("\n\r");
         

@@ -20,10 +20,13 @@
 
 #define _XTAL_FREQ   8000000
 #define T_DELAY 256 - 249
+#define FACTOR 0.48
 
 int adc, adc1, adc2; // contengono il valore della misura della distanza
 int distance; // massima distanza tollerata
 int distance2; // distanza fra i sensori
+int distanceEff; // distanza effettiva misurata
+int volt; //volt rivelati dal sensore
 int ms; // tempo misurato in millisecondi
 int mode; // unita' di misura della velocita'
 float * Data;
@@ -193,19 +196,34 @@ void settaggi()
 }
 
 void update()
-{
-    // cronologia delle misure
-    adc2 = adc1;
-    adc1 = adc;
-    
+{   
     ADCON0bits.GO = 1; // start conversion
     
     while (ADCON0bits.GO == 1); // wait for end of conversion
     
     adc = (ADRESH << 8) + ADRESL;
-    printf("adc: %d; ADRESH: %d; ADRESL: %d\n\r", adc, ADRESH, ADRESL);
-    __delay_ms(100);
+    
+    ADCON0bits.GO = 1;
+
+    while (ADCON0bits.GO == 1); // wait for end of conversion
+
+    adc1 = (ADRESH << 8) + ADRESL;
+
+    ADCON0bits.GO = 1;
+
+    while (ADCON0bits.GO == 1); // wait for end of conversion
+
+    adc2 = (ADRESH << 8) + ADRESL;
+
+    volt = ((adc + adc1 + adc) / 3) * FACTOR;
+
+    distanceEff = (6787 / (volt - 3)) - 4;
+
 }
+
+
+
+
 
 main()
 {
@@ -256,7 +274,7 @@ main()
     ADCON0bits.VCFG = 0; // Reference = VDD
     ADCON0bits.CHS = 0b0010; // Select channel 
     ADCON0bits.ADON = 1; // enable adc module
-    ADCON1bits.ADCS = 0b010; // ADC clock =FOSC/32
+    ADCON1bits.ADCS = 0b000; // ADC clock =FOSC/2
 
     // setto il timer
     OPTION_REGbits.T0CS = 0;
@@ -272,29 +290,26 @@ main()
     {
     	// ricezione dal primo sensore
         do	update();
-        while (adc < 300 || adc1 < 300 || adc2 < 300);
+        while (distanceEff < distance);
+        printf("%d\n\r", distanceEff);
         
         // cambia il sensore di ricezione
         ADCON0bits.CHS = 0b1010;
         
         // avvio il timer
         INTCONbits.T0IE = 1;
-        
-        // azzero la cronologia
-        adc = adc1 = adc2 = 0;
-		
+
 	// ricezione dal secondo sensore
         do	update();
-        while (adc < 300 || adc1 < 300 || adc2 < 300);
+        while (distanceEff < distance);
         
         // disabilito il timer
         INTCONbits.T0IE = 0;
         
         // riabilita il primo canale (a scapito del secondo)
         ADCON0bits.CHS = 0b0010;
+
         
-        // azzero la cronologia
-        adc = adc1 = adc2 = 0;
 
         // output del risultato
         printf("%ds %dms\n\r", (int) (ms / 1000), ms);

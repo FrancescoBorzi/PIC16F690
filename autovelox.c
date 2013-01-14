@@ -126,7 +126,6 @@ void settaggi()
 
         printf("\n\r");
         
-        // TODO: distance2 deve contenere il numero composto da tutti i caratteri cifra ricevute in input
         printf("SELEZIONARE LA DISTANZA FRA I SENSORI COMPRESA TRA 0 E 999(enter = default)\n\r");
         printf("\n\r");
 

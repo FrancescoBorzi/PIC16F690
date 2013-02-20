@@ -22,14 +22,14 @@
 #define T_DELAY 256 - 249
 #define FACTOR 0.48
 
-int adc, adc1, adc2; // contengono il valore della misura della distanza
-int distance; // massima distanza tollerata
-int distance2; // distanza fra i sensori
-int distanceEff; // distanza effettiva misurata
-int volt; //volt rivelati dal sensore
-int ms; // tempo misurato in millisecondi
+unsigned int adc[3]; // contengono il valore della misura della distanza
+unsigned int distance; // massima distanza tollerata
+unsigned int distance2; // distanza fra i sensori
+unsigned int distanceEff; // distanza effettiva misurata
+unsigned int volt; //volt rivelati dal sensore
+unsigned int ms; // tempo misurato in millisecondi
 int mode; // unita' di misura della velocita'
-float * Data;
+
 
 // ridefinisco la printf
 void putch(unsigned char byte)
@@ -196,28 +196,39 @@ void settaggi()
 
 void update()
 {   
-    ADCON0bits.GO = 1; // start conversion
+    int i = 0;
+    for(i = 0; i < 3; i++) {
+        do {
+            ADCON0bits.GO = 1; // start conversion
+
+            while (ADCON0bits.GO == 1); // wait for end of conversion
+
+            adc[i] = (ADRESH << 8) + ADRESL;
+           
+        }while (adc[i] < 120);
+    }
+//    ADCON0bits.GO = 1; // start conversion
+//
+//    while (ADCON0bits.GO == 1); // wait for end of conversion
+//
+//    adc[0] = (ADRESH << 8) + ADRESL;
+//
+//    ADCON0bits.GO = 1;
+//
+//    while (ADCON0bits.GO == 1); // wait for end of conversion
+//
+//    adc[1] = (ADRESH << 8) + ADRESL;
+//
+//    ADCON0bits.GO = 1;
+//
+//    while (ADCON0bits.GO == 1); // wait for end of conversion
+//
+//    adc2 = (ADRESH << 8) + ADRESL;
+
+    volt = ((adc[0] + adc[1] + adc[2]) / 3) * FACTOR;
     
-    while (ADCON0bits.GO == 1); // wait for end of conversion
-    
-    adc = (ADRESH << 8) + ADRESL;
-    
-    ADCON0bits.GO = 1;
-
-    while (ADCON0bits.GO == 1); // wait for end of conversion
-
-    adc1 = (ADRESH << 8) + ADRESL;
-
-    ADCON0bits.GO = 1;
-
-    while (ADCON0bits.GO == 1); // wait for end of conversion
-
-    adc2 = (ADRESH << 8) + ADRESL;
-
-    volt = ((adc + adc1 + adc) / 3) * FACTOR;
-
     distanceEff = (6787 / (volt - 3)) - 4;
-
+    printf("%d %d %d\n\r",volt , distanceEff);
 }
 
 
@@ -289,8 +300,8 @@ main()
     {
     	// ricezione dal primo sensore
         do	update();
-        while (distanceEff < distance);
-        printf("%d\n\r", distanceEff);
+        while (distanceEff > distance);
+        //printf("%d %d\n\r", distanceEff, distance);
         
         // cambia il sensore di ricezione
         ADCON0bits.CHS = 0b1010;
@@ -300,7 +311,7 @@ main()
 
 	// ricezione dal secondo sensore
         do	update();
-        while (distanceEff < distance);
+        while (distanceEff > distance);
         
         // disabilito il timer
         INTCONbits.T0IE = 0;

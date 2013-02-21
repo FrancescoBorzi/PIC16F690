@@ -3,6 +3,7 @@
 #include <delays.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 // PIC16F690 Configuration Bit Settings
 
@@ -19,7 +20,7 @@
 
 
 #define _XTAL_FREQ   8000000
-#define T_DELAY 256 - 249
+#define T_DELAY 1
 #define FACTOR 0.48
 
 unsigned int adc[3]; // contengono il valore della misura della distanza
@@ -32,39 +33,32 @@ int mode; // unita' di misura della velocita'
 
 
 // ridefinisco la printf
-void putch(unsigned char byte)
-{
+
+void putch(unsigned char byte) {
     /* output one byte */
     TXREG = byte;
     while (!TXSTAbits.TRMT); /* set when register is empty */
 }
 
-void interrupt isr(void)
-{
+void interrupt isr(void) {
     // scatta ogni millisecondo
-    if (INTCONbits.T0IF == 1)
-    {
+    if (INTCONbits.T0IF == 1) {
         ms++;
-        if (ms == 1000)
-        {
-            ms = 0;
-            PORTCbits.RC0 = !PORTCbits.RC0;
-        }
+
         TMR0 = T_DELAY;
+
         INTCONbits.T0IF = 0;
     }
 }
 
-void settaggi()
-{
+void settaggi() {
     int restart = 0;
-    
-    do
-    {
-    	// variabili di appoggio
+
+    do {
+        // variabili di appoggio
         char c, num[3];
         int x, count;
-        
+
         printf("-----------Autovelox v1.0--------------\n\r");
         printf("               Setup                    \n\r");
         printf("\n\r");
@@ -72,60 +66,59 @@ void settaggi()
         printf("\n\r");
         printf("SELEZIONARE LA DISTANZA DI RIVELAMENTO\n\r");
         printf("\n\r");
-        printf("Press 1 to 20cm\n\r");
-        printf("Press 2 to 40cm\n\r");
-        printf("Press 3 to 60cm\n\r");
-        printf("Press 4 to 80cm\n\r");
+        printf("Press 1 to 10cm\n\r");
+        printf("Press 2 to 20cm\n\r");
+        printf("Press 3 to 30cm\n\r");
+        printf("Press 4 to 40cm\n\r");
 
-	// aspetta un input da tastiera
+
+        // aspetta un input da tastiera
         while (PIR1bits.RCIF == 0);
-        
+
         // memorizza il carattere che e' appena arrivato
         c = RCREG;
-        
+
         // settaggio distanza massima tollerata
-        switch (c)
-        {
-            case '1': distance = 20;
+        switch (c) {
+            case '1': distance = 10;
                 break;
-            case '2': distance = 40;
+            case '2': distance = 20;
                 break;
-            case '3': distance = 60;
+            case '3': distance = 30;
                 break;
-            case '4': distance = 80;
+            case '4': distance = 40;
                 break;
         }
-        
+
         printf("selected %d\n\r", distance);
         printf("\n\r");
-        
+
         printf("SELEZIONARE UNITA' DI MISURA\n\r");
         printf("\n\r");
         printf("Press 1 to Km/h\n\r");
         printf("Press 2 to m/s\n\r");
-        
+
         // aspetta un input da tastiera
         while (PIR1bits.RCIF == 0);
-        
+
         // memorizza il carattere che e' appena arrivato
         c = RCREG;
-        
+
         // settaggio unita' di misura
-        switch (c)
-        {
+        switch (c) {
             case '1': mode = 1;
                 break;
             case '2': mode = 0;
                 break;
         }
-        
-        if(mode)
-            printf("selected Km/h\n\r");
-        else
+
+        if (mode)
             printf("selected m/s\n\r");
+        else
+            printf("selected cm/ms\n\r");
 
         printf("\n\r");
-        
+
         printf("SELEZIONARE LA DISTANZA FRA I SENSORI COMPRESA TRA 0 E 999(enter = default)\n\r");
         printf("\n\r");
 
@@ -134,59 +127,54 @@ void settaggi()
         num[0] = 48;
         num[1] = 48;
         num[2] = 48;
-        
-        while(x != 13 && count < 3)
-        {
+
+        while (x != 13 && count < 3) {
             while (PIR1bits.RCIF == 0);
 
             x = RCREG;
-            
-            if (x == 13 )
+
+            if (x == 13)
                 break;
-            else
-            {
-                printf("%d", x-48);
+            else {
+                printf("%d", x - 48);
                 num[count] = x;
                 count++;
             }
         }
-        switch (count)
-        {
-                case 0:
-                    distance2 = 20;
-                    break;
-                case 1:
-                    distance2 = num[0] - 48;
-                    break;
-                case 2:
-                    distance2 = (num[0] - 48) * 10 + (num[1] - 48);
-                    break;
-                case 3:
-                    distance2 = (num[0] - 48) * 100 + (num[1] - 48) * 10 + (num[2] - 48);
-                    break;
+        switch (count) {
+            case 0:
+                distance2 = 20;
+                break;
+            case 1:
+                distance2 = num[0] - 48;
+                break;
+            case 2:
+                distance2 = (num[0] - 48) * 10 + (num[1] - 48);
+                break;
+            case 3:
+                distance2 = (num[0] - 48) * 100 + (num[1] - 48) * 10 + (num[2] - 48);
+                break;
         }
 
         printf("(TEST): valore scelto %d\n", distance2);
 
         printf("\n\r");
-        
-        
+
+
         printf("Do you are ready for start Autovelox?\n\r");
         printf("press 1 to start or 0 to restart setup\n\r");
-        
+
         while (PIR1bits.RCIF == 0);
-        
+
         c = RCREG;
-        
-        switch (c)
-        {
+
+        switch (c) {
             case '0': restart = 1;
                 break;
             case '1': restart = 0;
                 break;
         }
-    }
-    while (restart);
+    } while (restart);
 
 
     printf("\n\r");
@@ -194,56 +182,44 @@ void settaggi()
     printf("Start\n\r");
 }
 
-void update()
-{   
+void update() {
     int i = 0;
-    for(i = 0; i < 3; i++) {
-        do {
+    //int var = 0;
+    do {
+        //int average = 0;
+
+        for (i = 0; i < 3; i++) {
+
             ADCON0bits.GO = 1; // start conversion
 
             while (ADCON0bits.GO == 1); // wait for end of conversion
 
             adc[i] = (ADRESH << 8) + ADRESL;
-           
-        }while (adc[i] < 120);
-    }
-//    ADCON0bits.GO = 1; // start conversion
-//
-//    while (ADCON0bits.GO == 1); // wait for end of conversion
-//
-//    adc[0] = (ADRESH << 8) + ADRESL;
-//
-//    ADCON0bits.GO = 1;
-//
-//    while (ADCON0bits.GO == 1); // wait for end of conversion
-//
-//    adc[1] = (ADRESH << 8) + ADRESL;
-//
-//    ADCON0bits.GO = 1;
-//
-//    while (ADCON0bits.GO == 1); // wait for end of conversion
-//
-//    adc2 = (ADRESH << 8) + ADRESL;
+            
+        }
+      //  average = ((adc[0] + adc[1] + adc[2]) / 3);
+        //var = abs(adc[0] - average) + abs(adc[1] - average) + abs(adc[2] - average);
 
-    volt = ((adc[0] + adc[1] + adc[2]) / 3) * FACTOR;
-    
+       
+    } while (adc[0] < 120 || adc[1] < 120 || adc[2] < 120); //|| var > 3);
+    //printf("%d\n\r",var);
+    //printf("%u\n\r", adc[0]);
+     //__delay_ms(500);
+    volt = ((adc[0] + adc[1] + adc[2]) / 3); //* FACTOR;
+
     distanceEff = (6787 / (volt - 3)) - 4;
-    printf("%d %d %d\n\r",volt , distanceEff);
+    //printf("%u\n\r", distanceEff);
+    
 }
 
-
-
-
-
-main()
-{
+main() {
     //frequenza settata a 4Mhz
     OSCCONbits.IRCF = 0b111;
-    OSCTUNEbits.TUN = 0b11010;
-    
+    OSCTUNEbits.TUN = 0b11100;
+
     // registri per settare le porte da analogico a digitale, inizialmente le setto tutte a digitale
     // e successivamente mi setto le porte analogiche che mi servono
-    ANSEL = 0; 
+    ANSEL = 0;
     ANSELH = 0;
 
     /* configure digital I/O */
@@ -253,29 +229,29 @@ main()
     TRISCbits.TRISC3 = 0;
     TRISBbits.TRISB7 = 0; // TX PIN set to output
     TRISBbits.TRISB5 = 1; // RX PIN set to input
-    
+
     // setup UART transmitter
     TXSTAbits.TX9 = 0; // 8 bit data
     TXSTAbits.TXEN = 1; // enable transmitter
     TXSTAbits.BRGH = 1; // high speed transmission
-    
+
     // setup UART receiver
     RCSTAbits.SPEN = 1; // enable serial port
     RCSTAbits.RX9 = 0; // 8 bit data
     RCSTAbits.CREN = 1; // enable receiver
-    
+
     // baud rate generator control
     BAUDCTLbits.BRG16 = 1; // 16 bit baud rate generator
-    
+
     // baud rate generator value
     SPBRGH = 0;
     SPBRG = 207;
-	
+
     PORTC = 0x00;
-    
+
     // avvia la configurazione utente
     settaggi();
-    
+
     /* configure ADC */
     ANSELbits.ANS2 = 1; // setto le porte
     ANSELHbits.ANS10 = 1;
@@ -284,54 +260,61 @@ main()
     ADCON0bits.VCFG = 0; // Reference = VDD
     ADCON0bits.CHS = 0b0010; // Select channel 
     ADCON0bits.ADON = 1; // enable adc module
-    ADCON1bits.ADCS = 0b000; // ADC clock =FOSC/2
+    ADCON1bits.ADCS = 0b010; // ADC clock =FOSC/2
 
     // setto il timer
     OPTION_REGbits.T0CS = 0;
     OPTION_REGbits.PS = 0b010;
     OPTION_REGbits.PSA = 0;
-    
+
     // abilito l'interrupt generale
     INTCONbits.GIE = 1;
 
-	ms = 0;
+    ms = 0;
 
-    for (;;)
-    {
-    	// ricezione dal primo sensore
-        do	update();
-        while (distanceEff > distance);
-        //printf("%d %d\n\r", distanceEff, distance);
+    for (;;) {
+        float result;
+        int res1;
+        int res2;
+        // ricezione dal primo sensore
+        do update(); while (distanceEff > distance);
+
+        PORTCbits.RC0 = 1;
         
         // cambia il sensore di ricezione
         ADCON0bits.CHS = 0b1010;
-        
+
         // avvio il timer
         INTCONbits.T0IE = 1;
 
-	// ricezione dal secondo sensore
-        do	update();
-        while (distanceEff > distance);
-        
+        // ricezione dal secondo sensore
+        do update(); while (distanceEff > distance);
+
         // disabilito il timer
         INTCONbits.T0IE = 0;
-        
+
         // riabilita il primo canale (a scapito del secondo)
         ADCON0bits.CHS = 0b0010;
 
-        
+        PORTCbits.RC0 = 0;
 
         // output del risultato
-        printf("%ds %dms\n\r", (int) (ms / 1000), ms);
+        printf("%u\n\r", distanceEff);
+        printf("%us %ums\n\r", (int) (ms / 1000), ms - (int) (ms / 1000 * 1000));
+        result = (float)distance2/(float)ms;
+        res1 = (int)result;
+        res2 = (result - res1)*100;
+        printf("%d,%d cm/ms",res1, res2);
 
-	// resetto il tempo
+
+        // resetto il tempo
         ms = 0;
-        
+
         printf("\n\r");
         printf("\n\r");
         printf("\n\r");
         printf("\n\r");
-        
+
         __delay_ms(500);
     }
 }

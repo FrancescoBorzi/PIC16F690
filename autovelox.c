@@ -183,10 +183,12 @@ void settaggi() {
 }
 
 void update() {
-    int i = 0;
-    //int var = 0;
+    int i = 0; // indice per il ciclo for
+
+    int var = 0; // varianza
+
+    int average = 0; // media
     do {
-        //int average = 0;
 
         for (i = 0; i < 3; i++) {
 
@@ -194,22 +196,21 @@ void update() {
 
             while (ADCON0bits.GO == 1); // wait for end of conversion
 
-            adc[i] = (ADRESH << 8) + ADRESL;
-            
+            adc[i] = (ADRESH << 8) + ADRESL; // assegnamento del voltaggio
+
         }
-      //  average = ((adc[0] + adc[1] + adc[2]) / 3);
-        //var = abs(adc[0] - average) + abs(adc[1] - average) + abs(adc[2] - average);
 
-       
-    } while (adc[0] < 120 || adc[1] < 120 || adc[2] < 120); //|| var > 3);
-    //printf("%d\n\r",var);
-    //printf("%u\n\r", adc[0]);
-     //__delay_ms(500);
-    volt = ((adc[0] + adc[1] + adc[2]) / 3); //* FACTOR;
+        average = ((adc[0] + adc[1] + adc[2]) / 3); // media dei valori
 
-    distanceEff = (6787 / (volt - 3)) - 4;
-    //printf("%u\n\r", distanceEff);
-    
+        var = abs(adc[0] - average) + abs(adc[1] - average) + abs(adc[2] - average); //calcolo della varianza
+
+    } while (var > 10);
+
+    // volt = ((adc[0] + adc[1] + adc[2]) / 3); //* FACTOR;
+
+    distanceEff = (6787 / (average - 3)) - 4;  //calcolo della distanza effettiva
+
+
 }
 
 main() {
@@ -273,14 +274,18 @@ main() {
     ms = 0;
 
     for (;;) {
-        float result;
-        int res1;
-        int res2;
+        float result; // velocità
+
+        int res1; // velocità (parte intera)
+
+        int res2; // velocità (parte frazionaria)
+
         // ricezione dal primo sensore
         do update(); while (distanceEff > distance);
 
+        // avvio il led
         PORTCbits.RC0 = 1;
-        
+
         // cambia il sensore di ricezione
         ADCON0bits.CHS = 0b1010;
 
@@ -296,15 +301,16 @@ main() {
         // riabilita il primo canale (a scapito del secondo)
         ADCON0bits.CHS = 0b0010;
 
+        // disattivo il led
         PORTCbits.RC0 = 0;
 
         // output del risultato
         printf("%u\n\r", distanceEff);
         printf("%us %ums\n\r", (int) (ms / 1000), ms - (int) (ms / 1000 * 1000));
-        result = (float)distance2/(float)ms;
-        res1 = (int)result;
+        result = (float) distance2 / (float) ms;
+        res1 = (int) result;
         res2 = (result - res1)*100;
-        printf("%d,%d cm/ms",res1, res2);
+        printf("%d,%d cm/ms", res1, res2);
 
 
         // resetto il tempo

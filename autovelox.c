@@ -256,6 +256,7 @@ main() {
     /* configure ADC */
     ANSELbits.ANS2 = 1; // setto le porte
     ANSELHbits.ANS10 = 1;
+    ANSELbits.ANS0 = 1;
 
     ADCON0bits.ADFM = 1; // right justified
     ADCON0bits.VCFG = 0; // Reference = VDD
@@ -274,6 +275,29 @@ main() {
     ms = 0;
 
     for (;;) {
+        int adc1;
+        if(mode) {
+             ADCON0bits.CHS = 0b0000;
+             ADCON0bits.GO = 1; // start conversion
+             while (ADCON0bits.GO == 1); // wait for end of conversion
+
+             adc1 = (ADRESH << 8) + ADRESL;
+
+             ADCON0bits.CHS = 0b0010;
+
+             if(adc1 > 720) adc1 = 720;
+
+             adc1 = (((float)adc1/(float)720)*100);
+
+             distance = ((float)adc1 / (float)100) * 40 + 10;
+
+             printf("%d distance\n\r", distance);
+        }
+
+
+
+
+
         float result; // velocità
 
         int res1; // velocità (parte intera)
@@ -305,7 +329,7 @@ main() {
         PORTCbits.RC0 = 0;
 
         // output del risultato
-        printf("%u\n\r", distanceEff);
+        printf("%u distanceEff\n\r", distanceEff);
         printf("%us %ums\n\r", (int) (ms / 1000), ms - (int) (ms / 1000 * 1000));
         result = (float) distance2 / (float) ms;
         res1 = (int) result;

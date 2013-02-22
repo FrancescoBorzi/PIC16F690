@@ -21,13 +21,12 @@
 
 #define _XTAL_FREQ   8000000
 #define T_DELAY 1
-#define FACTOR 0.48
+//#define FACTOR 0.48
 
 unsigned int adc[3]; // contengono il valore della misura della distanza
 unsigned int distance; // massima distanza tollerata
 unsigned int distance2; // distanza fra i sensori
 unsigned int distanceEff; // distanza effettiva misurata
-unsigned int volt; //volt rivelati dal sensore
 unsigned int ms; // tempo misurato in millisecondi
 int mode; // unita' di misura della velocita'
 
@@ -53,6 +52,7 @@ void interrupt isr(void) {
 
 void settaggi() {
     int restart = 0;
+    ms = 0;
 
     do {
         // variabili di appoggio
@@ -60,16 +60,15 @@ void settaggi() {
         int x, count;
 
         printf("-----------Autovelox v1.0--------------\n\r");
-        printf("               Setup                    \n\r");
-        printf("\n\r");
-        printf("\n\r");
-        printf("\n\r");
-        printf("SELEZIONARE LA DISTANZA DI RIVELAMENTO\n\r");
-        printf("\n\r");
-        printf("Press 1 to 10cm\n\r");
-        printf("Press 2 to 20cm\n\r");
-        printf("Press 3 to 30cm\n\r");
-        printf("Press 4 to 40cm\n\r");
+        printf("               Setup                    \n\n\r");
+        //printf("\n\r");
+        printf("SELEZIONARE LA DISTANZA DI RIVELAMENTO\n\n\r");
+        //printf("\n\r");
+        printf("Premi 1 per 10cm\n\r");
+        printf("Premi 2 per 20cm\n\r");
+        printf("Premi 3 per 30cm\n\r");
+        printf("Premi 4 per 40cm\n\r");
+        printf("Premi 5 per per utilizzare la rotellina\n\n\r");
 
 
         // aspetta un input da tastiera
@@ -88,45 +87,17 @@ void settaggi() {
                 break;
             case '4': distance = 40;
                 break;
+            case '5': mode = 1;
         }
 
-        printf("selected %d\n\r", distance);
-        printf("\n\r");
-
-        printf("SELEZIONARE UNITA' DI MISURA\n\r");
-        printf("\n\r");
-        printf("Press 1 to Km/h\n\r");
-        printf("Press 2 to m/s\n\r");
-
-        // aspetta un input da tastiera
-        while (PIR1bits.RCIF == 0);
-
-        // memorizza il carattere che e' appena arrivato
-        c = RCREG;
-
-        // settaggio unita' di misura
-        switch (c) {
-            case '1': mode = 1;
-                break;
-            case '2': mode = 0;
-                break;
-        }
-
-        if (mode)
-            printf("selected m/s\n\r");
-        else
-            printf("selected cm/ms\n\r");
-
-        printf("\n\r");
-
-        printf("SELEZIONARE LA DISTANZA FRA I SENSORI COMPRESA TRA 0 E 999(enter = default)\n\r");
-        printf("\n\r");
+        //printf("selected %d\n\r", distance);
+        //printf("\n\r");
+        printf("SELEZIONARE LA DISTANZA FRA I SENSORI COMPRESA TRA 0 E 999 cm(enter = default)\n\n\r");
+        //printf("\n\r");
 
         // inizializzo le variabili di appoggio
-        distance2 = x = count = 0;
-        num[0] = 48;
-        num[1] = 48;
-        num[2] = 48;
+        x = count = 0;
+        num[0] = num[1] = num[2] = 48;
 
         while (x != 13 && count < 3) {
             while (PIR1bits.RCIF == 0);
@@ -153,36 +124,28 @@ void settaggi() {
                 break;
             case 3:
                 distance2 = (num[0] - 48) * 100 + (num[1] - 48) * 10 + (num[2] - 48);
-                break;
         }
 
-        printf("(TEST): valore scelto %d\n", distance2);
-
-        printf("\n\r");
-
-
-        printf("Do you are ready for start Autovelox?\n\r");
-        printf("press 1 to start or 0 to restart setup\n\r");
+        printf("\n\rAvviare l'autovelox?\n\rpremi 1 per avviare 0 per ripetere il setup\n\n\r");
+        //printf("premi 1 per avviare 0 per ripetere il setup\n\n\r");
 
         while (PIR1bits.RCIF == 0);
 
         c = RCREG;
 
-        switch (c) {
-            case '0': restart = 1;
-                break;
-            case '1': restart = 0;
-                break;
-        }
+        if(c == '0')
+            restart = 1;
+        else
+            restart = 0;
+
+
     } while (restart);
 
-
-    printf("\n\r");
-    printf("\n\r");
-    printf("Start\n\r");
+    printf("Start\n\n\r");
 }
 
 void update() {
+
     int i = 0; // indice per il ciclo for
 
     int var = 0; // varianza
@@ -204,7 +167,7 @@ void update() {
 
         var = abs(adc[0] - average) + abs(adc[1] - average) + abs(adc[2] - average); //calcolo della varianza
 
-    } while (var > 10);
+    } while (var > 5);
 
     // volt = ((adc[0] + adc[1] + adc[2]) / 3); //* FACTOR;
 
@@ -272,12 +235,22 @@ main() {
     // abilito l'interrupt generale
     INTCONbits.GIE = 1;
 
-    ms = 0;
-
     for (;;) {
+
         int adc1;
+        
+        float result; // velocità
+
+        int res[2]; // velocità (parte intera)
+
+       // int res2; // velocità (parte frazionaria)
+
         if(mode) {
+            //setto il canale per la rotellina
              ADCON0bits.CHS = 0b0000;
+
+             __delay_ms(500);
+
              ADCON0bits.GO = 1; // start conversion
              while (ADCON0bits.GO == 1); // wait for end of conversion
 
@@ -289,26 +262,16 @@ main() {
 
              adc1 = (((float)adc1/(float)720)*100);
 
-             distance = ((float)adc1 / (float)100) * 40 + 10;
+             distance = ((float)adc1 / (float)100) * 30 + 10;
 
-             printf("%d distance\n\r", distance);
+             //printf("%d distance\n\r", distance);
         }
-
-
-
-
-
-        float result; // velocità
-
-        int res1; // velocità (parte intera)
-
-        int res2; // velocità (parte frazionaria)
 
         // ricezione dal primo sensore
         do update(); while (distanceEff > distance);
 
         // avvio il led
-        PORTCbits.RC0 = 1;
+        //PORTCbits.RC0 = 1;
 
         // cambia il sensore di ricezione
         ADCON0bits.CHS = 0b1010;
@@ -326,24 +289,25 @@ main() {
         ADCON0bits.CHS = 0b0010;
 
         // disattivo il led
-        PORTCbits.RC0 = 0;
+        //PORTCbits.RC0 = 0;
 
         // output del risultato
-        printf("%u distanceEff\n\r", distanceEff);
-        printf("%us %ums\n\r", (int) (ms / 1000), ms - (int) (ms / 1000 * 1000));
+        printf("%ucm distanza effettiva \n\r%ucm distanza considerata\n\r", distanceEff, distance);
+        printf("%us %ums tempo impiegato\n\r", (int) (ms / 1000), ms - (int) (ms / 1000 * 1000));
+        printf("%ucm distanza percorsa\n\r", distance2);
         result = (float) distance2 / (float) ms;
-        res1 = (int) result;
-        res2 = (result - res1)*100;
-        printf("%d,%d cm/ms", res1, res2);
-
+        result *= 10;
+        res[0] = (int) result;
+        res[1] = (result - res[0])*100;
+        printf("%d,%d m/s\n\r", res[0], res[1]);
+        //
+        result *= 3.6;
+        res[0] = (int) result;
+        res[1] = (result - res[0])*100;
+        printf("%d,%d km/h\n\n\r", res[0], res[1]);
 
         // resetto il tempo
         ms = 0;
-
-        printf("\n\r");
-        printf("\n\r");
-        printf("\n\r");
-        printf("\n\r");
 
         __delay_ms(500);
     }

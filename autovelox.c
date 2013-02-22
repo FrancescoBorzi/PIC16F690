@@ -20,7 +20,7 @@
 
 
 #define _XTAL_FREQ   8000000
-#define T_DELAY 1
+//#define T_DELAY 1
 //#define FACTOR 0.48
 
 unsigned int adc[3]; // contengono il valore della misura della distanza
@@ -29,6 +29,9 @@ unsigned int distance2; // distanza fra i sensori
 unsigned int distanceEff; // distanza effettiva misurata
 unsigned int ms; // tempo misurato in millisecondi
 int mode; // unita' di misura della velocita'
+int i; // indice per il ciclo for
+int var; // varianza
+int average; // media
 
 
 // ridefinisco la printf
@@ -44,7 +47,7 @@ void interrupt isr(void) {
     if (INTCONbits.T0IF == 1) {
         ms++;
 
-        TMR0 = T_DELAY;
+        TMR0 = 1;
 
         INTCONbits.T0IF = 0;
     }
@@ -59,18 +62,14 @@ void settaggi() {
         char c, num[3];
         int x, count;
 
-        printf("-----------Autovelox v1.0--------------\n\r");
-        printf("               Setup                    \n\n\r");
-        //printf("\n\r");
+        printf("-----------Autovelox v1.0--------------\n\r               Setup                    \n\n\r");
         printf("SELEZIONARE LA DISTANZA DI RIVELAMENTO\n\n\r");
-        //printf("\n\r");
         printf("Premi 1 per 10cm\n\r");
         printf("Premi 2 per 20cm\n\r");
         printf("Premi 3 per 30cm\n\r");
         printf("Premi 4 per 40cm\n\r");
         printf("Premi 5 per per utilizzare la rotellina\n\n\r");
-
-
+        
         // aspetta un input da tastiera
         while (PIR1bits.RCIF == 0);
 
@@ -90,10 +89,7 @@ void settaggi() {
             case '5': mode = 1;
         }
 
-        //printf("selected %d\n\r", distance);
-        //printf("\n\r");
         printf("SELEZIONARE LA DISTANZA FRA I SENSORI COMPRESA TRA 0 E 999 cm(enter = default)\n\n\r");
-        //printf("\n\r");
 
         // inizializzo le variabili di appoggio
         x = count = 0;
@@ -112,6 +108,7 @@ void settaggi() {
                 count++;
             }
         }
+        
         switch (count) {
             case 0:
                 distance2 = 20;
@@ -127,7 +124,6 @@ void settaggi() {
         }
 
         printf("\n\rAvviare l'autovelox?\n\rpremi 1 per avviare 0 per ripetere il setup\n\n\r");
-        //printf("premi 1 per avviare 0 per ripetere il setup\n\n\r");
 
         while (PIR1bits.RCIF == 0);
 
@@ -146,37 +142,38 @@ void settaggi() {
 
 void update() {
 
-    int i = 0; // indice per il ciclo for
-
-    int var = 0; // varianza
-
-    int average = 0; // media
     do {
 
         for (i = 0; i < 3; i++) {
 
-            ADCON0bits.GO = 1; // start conversion
+            // start conversion
+            ADCON0bits.GO = 1; 
 
-            while (ADCON0bits.GO == 1); // wait for end of conversion
+            // wait for end of conversion
+            while (ADCON0bits.GO == 1); 
 
-            adc[i] = (ADRESH << 8) + ADRESL; // assegnamento del voltaggio
+            // assegnamento del voltaggio
+            adc[i] = (ADRESH << 8) + ADRESL; 
 
         }
 
-        average = ((adc[0] + adc[1] + adc[2]) / 3); // media dei valori
+        // media dei valori
+        average = ((adc[0] + adc[1] + adc[2]) / 3); 
 
-        var = abs(adc[0] - average) + abs(adc[1] - average) + abs(adc[2] - average); //calcolo della varianza
+        //calcolo della varianza
+        var = abs(adc[0] - average) + abs(adc[1] - average) + abs(adc[2] - average); 
 
     } while (var > 5);
 
     // volt = ((adc[0] + adc[1] + adc[2]) / 3); //* FACTOR;
-
-    distanceEff = (6787 / (average - 3)) - 4;  //calcolo della distanza effettiva
+    //calcolo della distanza effettiva
+    distanceEff = (6787 / (average - 3)) - 4;  
 
 
 }
 
 main() {
+    
     //frequenza settata a 4Mhz
     OSCCONbits.IRCF = 0b111;
     OSCTUNEbits.TUN = 0b11100;
@@ -239,24 +236,25 @@ main() {
 
         int adc1;
         
-        float result; // velocità
-
-        int res[2]; // velocità (parte intera)
-
-       // int res2; // velocità (parte frazionaria)
+        // velocità
+        float result;
+        
+        // velocità (parte intera)
+        int res[2]; 
 
         if(mode) {
             //setto il canale per la rotellina
              ADCON0bits.CHS = 0b0000;
 
              __delay_ms(500);
+             
+             // start conversion
+             ADCON0bits.GO = 1;
 
-             ADCON0bits.GO = 1; // start conversion
-             while (ADCON0bits.GO == 1); // wait for end of conversion
+             // wait for end of conversion
+             while (ADCON0bits.GO == 1); 
 
              adc1 = (ADRESH << 8) + ADRESL;
-
-             ADCON0bits.CHS = 0b0010;
 
              if(adc1 > 720) adc1 = 720;
 
@@ -264,14 +262,14 @@ main() {
 
              distance = ((float)adc1 / (float)100) * 30 + 10;
 
-             //printf("%d distance\n\r", distance);
         }
+        ADCON0bits.CHS = 0b0010;
 
         // ricezione dal primo sensore
         do update(); while (distanceEff > distance);
 
         // avvio il led
-        //PORTCbits.RC0 = 1;
+        PORTCbits.RC0 = 1;
 
         // cambia il sensore di ricezione
         ADCON0bits.CHS = 0b1010;
@@ -286,10 +284,10 @@ main() {
         INTCONbits.T0IE = 0;
 
         // riabilita il primo canale (a scapito del secondo)
-        ADCON0bits.CHS = 0b0010;
+        //ADCON0bits.CHS = 0b0010;
 
         // disattivo il led
-        //PORTCbits.RC0 = 0;
+        PORTCbits.RC0 = 0;
 
         // output del risultato
         printf("%ucm distanza effettiva \n\r%ucm distanza considerata\n\r", distanceEff, distance);

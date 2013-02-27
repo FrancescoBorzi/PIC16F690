@@ -21,7 +21,6 @@
 
 #define _XTAL_FREQ   8000000
 #define T_DELAY 1
-//#define FACTOR 0.48
 
 unsigned int adc[3]; // contengono il valore della misura della distanza
 unsigned int maxDistance; // massima distanza tollerata
@@ -166,25 +165,22 @@ void update() {
         var = abs(adc[0] - average) + abs(adc[1] - average) + abs(adc[2] - average);
 
     } while (var > 5); // si ripete fino a quando la varianza non e' troppo elevata
-
-    // volt = ((adc[0] + adc[1] + adc[2]) / 3); //* FACTOR;
     
     // calcolo della distanza effettiva tra il sensore e l'oggetto
     distanceEff = (6787 / (average - 3)) - 4;
 }
 
-main() {
-
-    // frequenza settata a 8Mhz
-    OSCCONbits.IRCF = 0b111;
-    OSCTUNEbits.TUN = 0b11100;
+main()
+{
+    OSCCONbits.IRCF = 0b111; // frequenza settata a 8Mhz
+    OSCTUNEbits.TUN = 0b11100; // altera (sensibilmente) la frequenza del processore 
 
     // registri per settare le porte da analogico a digitale, inizialmente le setto tutte a digitale
     // e successivamente mi setto le porte analogiche che mi servono
     ANSEL = 0;
     ANSELH = 0;
 
-    /* configure digital I/O */
+    // TRISCbits.N setta il corrispondente PORTC.N output (0) o input (1)
     TRISCbits.TRISC0 = 0;
     TRISCbits.TRISC1 = 0;
     TRISCbits.TRISC2 = 0;
@@ -192,12 +188,12 @@ main() {
     TRISBbits.TRISB7 = 0; // TX PIN set to output
     TRISBbits.TRISB5 = 1; // RX PIN set to input
 
-    // setup UART transmitter
+    // setup UART transmitter (porta seriale)
     TXSTAbits.TX9 = 0; // 8 bit data
     TXSTAbits.TXEN = 1; // enable transmitter
     TXSTAbits.BRGH = 1; // high speed transmission
 
-    // setup UART receiver
+    // setup UART receiver (porta seriale)
     RCSTAbits.SPEN = 1; // enable serial port
     RCSTAbits.RX9 = 0; // 8 bit data
     RCSTAbits.CREN = 1; // enable receiver
@@ -209,26 +205,28 @@ main() {
     SPBRGH = 0;
     SPBRG = 207;
 
-    PORTC = 0x00;
+    PORTC = 0x00; // spegne tutte le luci
 
     // avvia la configurazione utente
     settaggi();
 
     /* configure ADC */
-    ANSELbits.ANS2 = 1; // setto le porte
+    
+    // setto la porte come analogiche
+    ANSELbits.ANS2 = 1;
     ANSELHbits.ANS10 = 1;
     ANSELbits.ANS0 = 1;
 
     ADCON0bits.ADFM = 1; // right justified
-    ADCON0bits.VCFG = 0; // Reference = VDD
-    ADCON0bits.CHS = 0b0010; // Select channel
+    ADCON0bits.VCFG = 0; // setta la referenza al VDD
+    ADCON0bits.CHS = 0b0010; // Select channel (0010 = AN2)
     ADCON0bits.ADON = 1; // enable adc module
-    ADCON1bits.ADCS = 0b010; // ADC clock =FOSC/2
+    ADCON1bits.ADCS = 0b010; // ADC clock = 4 ms
 
     // setto il timer
-    OPTION_REGbits.T0CS = 0;
-    OPTION_REGbits.PS = 0b010;
-    OPTION_REGbits.PSA = 0;
+    OPTION_REGbits.T0CS = 0; // la frequenza in entrata dev'essere quella interna del processore
+    OPTION_REGbits.PSA = 0; // setto l'uscita del prescaler al modulo TMR0
+    OPTION_REGbits.PS = 0b010; // la frequenza viene divisa per 8
 
     // abilito l'interrupt generale
     INTCONbits.GIE = 1;
@@ -303,12 +301,12 @@ main() {
         printf("%us %ums tempo impiegato\n\r", (int) (ms / 1000), ms - (int) (ms / 1000 * 1000));
         printf("%ucm distanza percorsa\n\r", sensorsDistance);
         result = (float) sensorsDistance / (float) ms;
-        result *= 10;
+        result *= 10; // m/s
         res[0] = (int) result;
         res[1] = (result - res[0])*100;
         printf("%d,%d m/s\n\r", res[0], res[1]);
-        //
-        result *= 3.6;
+
+        result *= 3.6; // km/h
         res[0] = (int) result;
         res[1] = (result - res[0])*100;
         printf("%d,%d km/h\n\n\r", res[0], res[1]);
